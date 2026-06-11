@@ -3,25 +3,78 @@ name: Daily Energy Reminder
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 0 * * *'   # Malaysia 8:30 AM
 
 jobs:
   send:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Telegram Message
+      - name: Generate and Send Telegram Message
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
-          -d "chat_id=${{ secrets.CHAT_ID }}" \
-          --data-urlencode "text=📅 今日能量提醒
+          TODAY=$(TZ="Asia/Kuala_Lumpur" date +"%Y年%-m月%-d日")
+          WEEKDAY=$(TZ="Asia/Kuala_Lumpur" date +"%u")
 
-保持专注，少受外界影响。
+          case "$WEEKDAY" in
+            1) WEEKDAY_CN="星期一" ;;
+            2) WEEKDAY_CN="星期二" ;;
+            3) WEEKDAY_CN="星期三" ;;
+            4) WEEKDAY_CN="星期四" ;;
+            5) WEEKDAY_CN="星期五" ;;
+            6) WEEKDAY_CN="星期六" ;;
+            7) WEEKDAY_CN="星期日" ;;
+          esac
 
-🎯 今日宜做：
-• 跟进客户
-• 处理拖延事项
+          PROMPT="# Role
+你是一位说话直白、干练的玄学运势顾问。你拒绝晦涩难懂的术语，只给用户最直接的能量建议。
 
-⚠️ 今日避坑：
-• 冲动消费
-• 情绪化决定"
+# Task
+今天是 ${TODAY}（${WEEKDAY_CN}）。请根据这个日期，为用户提供一段不超过 150 字的能量建议。
+
+# 逻辑规则
+1. 周一/周三/周五：请用一句话总结今日核心，并附上“王老师点评”。
+2. 其他日期：请直接输出“能量避坑指南”。
+
+# Output Format
+📅 ${TODAY} (${WEEKDAY_CN}) | 每日能量提醒
+
+✨ 今日核心启示 ：
+[内容]
+
+🎯 今日宜做 ：
+• [动作1]
+• [动作2]
+
+⚠️ 今日避坑 ：
+• [动作1]
+• [动作2]
+
+🔢 今日幸运磁场 ：
+• 数字：[数字]
+• 颜色：[颜色]
+• 旺生肖：[生肖]
+
+---
+🔗 想一对一算运势？点击咨询王老师：
+👉 https://wa.me/60167272735"
+
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d "$(jq -n --arg prompt "$PROMPT" '{
+              model: "gpt-4o-mini",
+              messages: [
+                {role: "user", content: $prompt}
+              ],
+              temperature: 0.8
+            }')")
+
+          MESSAGE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}"
