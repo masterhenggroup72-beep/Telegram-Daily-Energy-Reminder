@@ -1,0 +1,21 @@
+name: Daily Energy Reminder
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 0 * * *"
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Daily Energy Reminder
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python3 send.py
