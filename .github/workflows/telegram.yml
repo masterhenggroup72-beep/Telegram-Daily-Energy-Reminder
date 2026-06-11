@@ -10,11 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Free Daily Energy Reminder
+      - name: Send Daily Energy Reminder
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python3 send.py
+        run: |
+          TODAY=$(TZ="Asia/Kuala_Lumpur" date +"%Y年%-m月%-d日")
+
+          MESSAGE="📅 ${TODAY} | 每日能量提醒
+
+✨ 今日核心启示 ：
+能量避坑指南：今天少说多做，别急着解释，行动比争辩更有力量。
+
+🎯 今日宜做 ：
+• 整理手上任务
+• 主动跟进客户
+
+⚠️ 今日避坑 ：
+• 情绪化回复
+• 临时乱改计划
+
+🔢 今日幸运磁场 ：
+• 数字：8
+• 颜色：金色
+• 旺生肖：龙、猴
+
+---
+🔗 想一对一算运势？点击咨询王老师：
+👉 https://wa.me/60167272735"
+
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}"
