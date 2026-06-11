@@ -3,7 +3,7 @@ name: Daily Energy Reminder
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 0 * * *'   # Malaysia 8:30 AM
+    - cron: '30 0 * * *'
 
 jobs:
   send:
@@ -30,10 +30,8 @@ jobs:
 
           if not bot_token:
               raise Exception("BOT_TOKEN is empty")
-
           if not chat_id:
               raise Exception("CHAT_ID is empty")
-
           if not openai_api_key:
               raise Exception("OPENAI_API_KEY is empty")
 
@@ -52,42 +50,44 @@ jobs:
           today = f"{malaysia_time.year}年{malaysia_time.month}月{malaysia_time.day}日"
           weekday_cn = weekdays[malaysia_time.weekday()]
 
-          prompt = f"""
-你是一位说话直白、干练的玄学运势顾问。不要讲复杂术语，只给最直接的能量建议。
+          prompt_lines = [
+              "你是一位说话直白、干练的玄学运势顾问。不要讲复杂术语，只给最直接的能量建议。",
+              "",
+              f"今天是 {today}（{weekday_cn}）。",
+              "",
+              "请根据今天日期，生成一段每日能量提醒。",
+              "",
+              "规则：",
+              "1. 如果是星期一、星期三、星期五：请给一句核心启示，并加入“王老师点评”。",
+              "2. 如果是其他日期：请直接输出“能量避坑指南”。",
+              "3. 总字数控制在150字以内。",
+              "4. 不要解释，不要多余开场白。",
+              "5. 严格按照以下格式输出：",
+              "",
+              f"📅 {today} ({weekday_cn}) | 每日能量提醒",
+              "",
+              "✨ 今日核心启示 ：",
+              "[内容]",
+              "",
+              "🎯 今日宜做 ：",
+              "• [动作1]",
+              "• [动作2]",
+              "",
+              "⚠️ 今日避坑 ：",
+              "• [动作1]",
+              "• [动作2]",
+              "",
+              "🔢 今日幸运磁场 ：",
+              "• 数字：[数字]",
+              "• 颜色：[颜色]",
+              "• 旺生肖：[生肖]",
+              "",
+              "---",
+              "🔗 想一对一算运势？点击咨询王老师：",
+              "👉 https://wa.me/60167272735"
+          ]
 
-今天是 {today}（{weekday_cn}）。
-
-请根据今天日期，生成一段每日能量提醒。
-
-规则：
-1. 如果是星期一、星期三、星期五：请给一句核心启示，并加入“王老师点评”。
-2. 如果是其他日期：请直接输出“能量避坑指南”。
-3. 总字数控制在150字以内。
-4. 不要解释，不要多余开场白。
-5. 严格按照以下格式输出：
-
-📅 {today} ({weekday_cn}) | 每日能量提醒
-
-✨ 今日核心启示 ：
-[内容]
-
-🎯 今日宜做 ：
-• [动作1]
-• [动作2]
-
-⚠️ 今日避坑 ：
-• [动作1]
-• [动作2]
-
-🔢 今日幸运磁场 ：
-• 数字：[数字]
-• 颜色：[颜色]
-• 旺生肖：[生肖]
-
----
-🔗 想一对一算运势？点击咨询王老师：
-👉 https://wa.me/60167272735
-"""
+          prompt = "\n".join(prompt_lines)
 
           openai_data = {
               "model": "gpt-4o-mini",
