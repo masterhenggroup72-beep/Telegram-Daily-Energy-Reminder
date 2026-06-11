@@ -3,7 +3,7 @@ name: Daily Energy Reminder
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 0 * * *'   # Malaysia 8:30 AM
+    - cron: '30 0 * * *'   # Malaysia time 8:30 AM
 
 jobs:
   send:
@@ -44,18 +44,19 @@ jobs:
             7) WEEKDAY_CN="星期日" ;;
           esac
 
-         PROMPT=$(cat <<'EOF'
-# Role
-你是一位说话直白、干练的玄学运势顾问。你拒绝晦涩难懂的术语，只给用户最直接的能量建议。
+          PROMPT="你是一位说话直白、干练的玄学运势顾问。不要讲复杂术语，只给最直接的能量建议。
 
-# Task
-今天是 ${TODAY}（${WEEKDAY_CN}）。请根据这个日期，为用户提供一段不超过 150 字的能量建议。
+今天是 ${TODAY}（${WEEKDAY_CN}）。
 
-# 逻辑规则
-1. 周一/周三/周五：请用一句话总结核心，并附上“王老师点评”。
-2. 其他日期：请直接输出“能量避坑指南”。
+请根据今天日期，生成一段每日能量提醒。
 
-# Output Format
+规则：
+1. 如果是星期一、星期三、星期五：请给一句核心启示，并加入“王老师点评”。
+2. 如果是其他日期：请直接输出“能量避坑指南”。
+3. 总字数控制在150字以内。
+4. 不要解释，不要多余开场白。
+5. 严格按照以下格式输出：
+
 📅 ${TODAY} (${WEEKDAY_CN}) | 每日能量提醒
 
 ✨ 今日核心启示 ：
@@ -76,6 +77,35 @@ jobs:
 
 ---
 🔗 想一对一算运势？点击咨询王老师：
-👉 https://wa.me/60167272735
-EOF
-)
+👉 https://wa.me/60167272735"
+
+          echo "Calling OpenAI..."
+
+          RESPONSE=$(curl -sS https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+            -d "$(jq -n --arg prompt "$PROMPT" '{
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "user",
+                  content: $prompt
+                }
+              ],
+              temperature: 0.8
+            }')")
+
+          echo "$RESPONSE"
+
+          MESSAGE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          if [ "$MESSAGE" = "null" ] || [ -z "$MESSAGE" ]; then
+            echo "OpenAI did not return message"
+            exit 1
+          fi
+
+          echo "Sending Telegram..."
+
+          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}"
