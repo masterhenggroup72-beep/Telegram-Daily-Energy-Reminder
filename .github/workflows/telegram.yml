@@ -1,6 +1,8 @@
-name: Telegram Test
+name: Daily Energy Reminder
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,4 +14,15 @@ jobs:
         run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
           -d "chat_id=${{ secrets.CHAT_ID }}" \
-          -d "text=🎉 GitHub 测试成功"
+          --data-urlencode "text=📅 今日能量提醒
+
+保持专注，少受外界影响。
+先完成重要的事，再处理紧急的事。
+
+🎯 今日宜做：
+• 跟进客户
+• 处理拖延事项
+
+⚠️ 今日避坑：
+• 冲动消费
+• 情绪化决定"
