@@ -3,141 +3,19 @@ name: Daily Energy Reminder
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 0 * * *'
+    - cron: "30 0 * * *"
 
 jobs:
   send:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Daily Energy Reminder
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run daily reminder script
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          python3 << 'PY'
-          import os
-          import json
-          import urllib.request
-          import urllib.parse
-          import urllib.error
-          from datetime import datetime, timezone, timedelta
-
-          bot_token = os.environ.get("BOT_TOKEN")
-          chat_id = os.environ.get("CHAT_ID")
-          openai_api_key = os.environ.get("OPENAI_API_KEY")
-
-          if not bot_token:
-              raise Exception("BOT_TOKEN is empty")
-          if not chat_id:
-              raise Exception("CHAT_ID is empty")
-          if not openai_api_key:
-              raise Exception("OPENAI_API_KEY is empty")
-
-          malaysia_time = datetime.now(timezone.utc) + timedelta(hours=8)
-
-          weekdays = {
-              0: "星期一",
-              1: "星期二",
-              2: "星期三",
-              3: "星期四",
-              4: "星期五",
-              5: "星期六",
-              6: "星期日"
-          }
-
-          today = f"{malaysia_time.year}年{malaysia_time.month}月{malaysia_time.day}日"
-          weekday_cn = weekdays[malaysia_time.weekday()]
-
-          prompt_lines = [
-              "你是一位说话直白、干练的玄学运势顾问。不要讲复杂术语，只给最直接的能量建议。",
-              "",
-              f"今天是 {today}（{weekday_cn}）。",
-              "",
-              "请根据今天日期，生成一段每日能量提醒。",
-              "",
-              "规则：",
-              "1. 如果是星期一、星期三、星期五：请给一句核心启示，并加入“王老师点评”。",
-              "2. 如果是其他日期：请直接输出“能量避坑指南”。",
-              "3. 总字数控制在150字以内。",
-              "4. 不要解释，不要多余开场白。",
-              "5. 严格按照以下格式输出：",
-              "",
-              f"📅 {today} ({weekday_cn}) | 每日能量提醒",
-              "",
-              "✨ 今日核心启示 ：",
-              "[内容]",
-              "",
-              "🎯 今日宜做 ：",
-              "• [动作1]",
-              "• [动作2]",
-              "",
-              "⚠️ 今日避坑 ：",
-              "• [动作1]",
-              "• [动作2]",
-              "",
-              "🔢 今日幸运磁场 ：",
-              "• 数字：[数字]",
-              "• 颜色：[颜色]",
-              "• 旺生肖：[生肖]",
-              "",
-              "---",
-              "🔗 想一对一算运势？点击咨询王老师：",
-              "👉 https://wa.me/60167272735"
-          ]
-
-          prompt = "\n".join(prompt_lines)
-
-          openai_data = {
-              "model": "gpt-4o-mini",
-              "messages": [
-                  {
-                      "role": "user",
-                      "content": prompt
-                  }
-              ],
-              "temperature": 0.8
-          }
-
-          try:
-              openai_request = urllib.request.Request(
-                  "https://api.openai.com/v1/chat/completions",
-                  data=json.dumps(openai_data).encode("utf-8"),
-                  headers={
-                      "Content-Type": "application/json",
-                      "Authorization": f"Bearer {openai_api_key}"
-                  },
-                  method="POST"
-              )
-
-              with urllib.request.urlopen(openai_request) as response:
-                  result = json.loads(response.read().decode("utf-8"))
-
-              message = result["choices"][0]["message"]["content"]
-
-              telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-
-              telegram_data = urllib.parse.urlencode({
-                  "chat_id": chat_id,
-                  "text": message
-              }).encode("utf-8")
-
-              telegram_request = urllib.request.Request(
-                  telegram_url,
-                  data=telegram_data,
-                  method="POST"
-              )
-
-              with urllib.request.urlopen(telegram_request) as response:
-                  print(response.read().decode("utf-8"))
-
-          except urllib.error.HTTPError as e:
-              print("HTTP Error:", e.code)
-              print(e.read().decode("utf-8"))
-              raise
-
-          except Exception as e:
-              print("Error:", str(e))
-              raise
-          PY
+        run: python3 send.py
