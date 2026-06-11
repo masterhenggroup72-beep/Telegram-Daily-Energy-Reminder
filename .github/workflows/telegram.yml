@@ -1,10 +1,9 @@
 name: Daily Energy Reminder
 
 on:
-  push:
   workflow_dispatch:
   schedule:
-    - cron: "30 0 * * *"
+    - cron: "15 7 * * *"
 
 jobs:
   send:
