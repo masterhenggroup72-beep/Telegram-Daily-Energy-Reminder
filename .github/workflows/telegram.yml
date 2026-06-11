@@ -44,7 +44,7 @@ jobs:
             7) WEEKDAY_CN="星期日" ;;
           esac
 
-          PROMPT=$(cat <<EOF
+         PROMPT=$(cat <<'EOF'
 # Role
 你是一位说话直白、干练的玄学运势顾问。你拒绝晦涩难懂的术语，只给用户最直接的能量建议。
 
@@ -79,31 +79,3 @@ jobs:
 👉 https://wa.me/60167272735
 EOF
 )
-
-          echo "Calling OpenAI..."
-
-          RESPONSE=$(curl -sS https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${OPENAI_API_KEY}" \
-            -d "$(jq -n --arg prompt "$PROMPT" '{
-              model: "gpt-4o-mini",
-              messages: [
-                {role: "user", content: $prompt}
-              ],
-              temperature: 0.8
-            }')")
-
-          echo "$RESPONSE"
-
-          MESSAGE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
-
-          if [ "$MESSAGE" = "null" ] || [ -z "$MESSAGE" ]; then
-            echo "OpenAI did not return message"
-            exit 1
-          fi
-
-          echo "Sending Telegram..."
-
-          curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}"
