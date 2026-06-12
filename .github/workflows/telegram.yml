@@ -4,7 +4,14 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: "30 0 * * *"
+    - cron: "30 1 * * *"
+    - cron: "35 1 * * *"
+    - cron: "40 1 * * *"
+    - cron: "45 1 * * *"
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   send:
@@ -15,11 +22,37 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          TODAY=$(TZ="Asia/Kuala_Lumpur" date +"%Y年%-m月%-d日")
+          TODAY=$(TZ="Asia/Kuala_Lumpur" date +"%Y-%m-%d")
+          TODAY_CN=$(TZ="Asia/Kuala_Lumpur" date +"%Y年%-m月%-d日")
+          ISSUE_TITLE="Daily Energy Sent ${TODAY}"
 
-          MESSAGE=$'📅 '"${TODAY}"$' | 每日能量提醒\n\n✨ 今日核心启示 ：\n能量避坑指南：今天少说多做，别急着解释，行动比争辩更有力量。\n\n🎯 今日宜做 ：\n• 整理手上任务\n• 主动跟进客户\n\n⚠️ 今日避坑 ：\n• 情绪化回复\n• 临时乱改计划\n\n🔢 今日幸运磁场 ：\n• 数字：8\n• 颜色：金色\n• 旺生肖：龙、猴\n\n---\n🔗 想一对一算运势？点击咨询王老师：\n👉 https://wa.me/60167272735'
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            EXISTING=$(curl -sS \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${REPO}/issues?state=open" \
+              | grep -F "$ISSUE_TITLE" || true)
+
+            if [ -n "$EXISTING" ]; then
+              echo "Today already sent. Skip duplicate."
+              exit 0
+            fi
+          fi
+
+          MESSAGE=$'📅 '"${TODAY_CN}"$' | 每日能量提醒\n\n✨ 今日核心启示 ：\n能量避坑指南：今天少说多做，别急着解释，行动比争辩更有力量。\n\n🎯 今日宜做 ：\n• 整理手上任务\n• 主动跟进客户\n\n⚠️ 今日避坑 ：\n• 情绪化回复\n• 临时乱改计划\n\n🔢 今日幸运磁场 ：\n• 数字：8\n• 颜色：金色\n• 旺生肖：龙、猴\n\n---\n🔗 想一对一算运势？点击咨询王老师：\n👉 https://wa.me/60167272735'
 
           curl -sS --fail-with-body -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -d "chat_id=${CHAT_ID}" \
             --data-urlencode "text=${MESSAGE}"
+
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            curl -sS -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${REPO}/issues" \
+              -d "{\"title\":\"${ISSUE_TITLE}\",\"body\":\"Sent automatically by GitHub Actions.\"}"
+          fi
